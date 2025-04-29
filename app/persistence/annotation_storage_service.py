@@ -8,7 +8,6 @@ class AnnotationStorageService():
     @staticmethod
     def save(annotation):
         data = Annotation(
-            user_id=annotation["current_user_id"],
             request=annotation["request"],
             query=annotation["query"],
             title=annotation["title"],
@@ -27,13 +26,8 @@ class AnnotationStorageService():
         return id
 
     @staticmethod
-    def get(user_id):
-        data = Annotation.find({"user_id": user_id}, one=True)
-        return data
-
-    @staticmethod
-    def get_all(user_id, page_number):
-        data = Annotation.find({"user_id": user_id}).sort(
+    def get(page_number):
+        data = Annotation.find().sort(
             '_id', -1).skip((page_number - 1) * 10).limit(10)
         return data
 
@@ -43,9 +37,9 @@ class AnnotationStorageService():
         return data
 
     @staticmethod
-    def get_user_query(annotation_id, user_id, query):
+    def get_by_query(annotation_id, user_id, query):
         data = Annotation.find_one(
-            {"_id": annotation_id, "user_id": user_id, "query": query})
+            {"_id": annotation_id, "query": query})
         return data
     
     @staticmethod

@@ -7,7 +7,7 @@ from app.services.cypher_generator import CypherQueryGenerator
 from app.services.metta_generator import MeTTa_Query_Generator
 from db import mongo_init
 from app.services.llm_handler import LLMHandler
-from app.persistence import AnnotationStorageService, UserStorageService
+from app.persistence import AnnotationStorageService, SourceStorageService
 import os
 import logging
 import yaml
@@ -41,7 +41,6 @@ def load_config():
         logging.error(f"Error parsing YAML file: {e}")
         raise
 
-
 config = load_config()
 
 limiter = Limiter(
@@ -68,13 +67,13 @@ app.config['llm_handler'] = llm
 app.config['annotation_threads'] = {} # holding the stop event for each annotation task
 app.config['annotation_lock'] = threading.Lock()
 
-schema_manager = SchemaManager(schema_config_path='./config/schema_config.yaml',
-                               biocypher_config_path='./config/biocypher_config.yaml',
-                               config_path='./config/schema')
+schema_manager = SchemaManager()
 
-#load the json that holds the count for the edges
-graph_info = json.load(open(GRAPH_INFO_PATH))
+if os.getenv('HURISTIC_SORT', 'False').lower() == 'true':
+    graph_info = json.load(open(GRAPH_INFO_PATH))
+else:
+    graph_info = {}
 
 # Import routes at the end to avoid circular imports
 from app import routes
-from app.annotation_controller import handle_client_request, process_full_data, requery
+from app.annotation_controller import handle_client_request, requery

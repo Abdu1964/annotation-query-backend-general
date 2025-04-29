@@ -21,7 +21,3 @@ class QueryGeneratorInterface(ABC):
     @abstractmethod
     def convert_to_dict(self, results, schema) -> tuple:
         pass
-
-    @abstractmethod
-    def parse_id(self, request) -> dict:
-        pass

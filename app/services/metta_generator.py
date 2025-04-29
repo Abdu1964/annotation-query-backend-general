@@ -286,8 +286,6 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
         node_type = set()
         edge_type = set()
         tuples = metta_seralizer(results)
-        named_types = ['gene_name', 'transcript_name', 'protein_name',
-                       'pathway_name', 'term_name']
 
         for match in tuples:
             graph_attribute = match[0]
@@ -309,12 +307,7 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
                 
                 if graph_components['properties']:
                      nodes[(src_type, src_value)][predicate] = tgt
-                else:
-                    if predicate in named_types:
-                        nodes[(src_type, src_value)]['name'] = tgt
 
-                if 'synonyms' in nodes[(src_type, src_value)]:
-                    del nodes[(src_type, src_value)]['synonyms']
                 if src_type not in node_type:
                     node_type.add(src_type)
                     node_to_dict[src_type] = []
@@ -403,18 +396,3 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
         query = self.get_node_properties(result, schema)
         result = self.run_query(query)
         return result
-
-    def parse_id(self, request):
-        nodes = request["nodes"]
-        named_types = {"gene": "gene_name", "transcript": "transcript_name"}
-        prefixes = ["ENSG", "ENST"]
-
-        for node in nodes:
-            is_named_type = node['type'] in named_types
-            is_name_as_id = all(not node["id"].startswith(prefix) for prefix in prefixes)
-            no_id = node["id"] != ''
-            if is_named_type and is_name_as_id and no_id:
-                node_type = named_types[node['type']]
-                node['properties'][node_type] = node["id"]
-                node['id'] = ''
-        return request

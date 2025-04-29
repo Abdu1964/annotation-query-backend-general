@@ -8,16 +8,12 @@ def heuristic_sort(requests, node_map):
     """
     predicates = requests['predicates']
 
-    not_unique = {'associated_with', 'expressed_in'}
-
     def has_properties(node_id):
         node = node_map.get(node_id, {})
         return bool(node.get('properties'))
 
     def get_count(predicate):
         predicate_type = predicate['type'].replace(" ", "_").lower()
-        if predicate_type in not_unique:
-            predicate_type = f"{predicate['source']}_{predicate_type}_{predicate['target']}"
         return graph_info.get(predicate_type, {}).get('count', 0)
 
     def predicate_sort_key(predicate):

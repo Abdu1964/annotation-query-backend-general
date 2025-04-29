@@ -4,7 +4,7 @@ import re
 def clean_string(s):
     return re.sub(r'[-_]', '', s)
 
-def validate_request(request, schema, source):
+def validate_request(request, schema):
     if 'nodes' not in request:
         raise Exception("node is missing")
 
@@ -56,10 +56,12 @@ def validate_request(request, schema, source):
     # validate predicates
     if 'predicates' in request:
         predicates = request['predicates']
+        print("Predicates: ", predicates)
 
         if not isinstance(predicates, list):
             raise Exception("Predicate should be a list")
         for i, predicate in enumerate(predicates):
+            print("rotating: ",  predicate)
             if 'type' not in predicate or predicate['type'] == "":
                 raise Exception("predicate type is required")
             if 'source' not in predicate or predicate['source'] == "":
@@ -83,21 +85,19 @@ def validate_request(request, schema, source):
                     f"Target node {predicate['target']}\
                     does not exist in the nodes object")
 
-            # format the predicate type using _
-            predicate_type = predicate['type'].split(' ')
-            predicate_type = '_'.join(predicate_type)
+            predicate_type = predicate['type']
 
             source_type = node_map[predicate['source']]['type']
             target_type = node_map[predicate['target']]['type']
 
-            predicate_type = f'{source_type}_{predicate_type}_{target_type}'
-            if predicate_type not in schema:
-                raise Exception(
-                    f"Invalid source and target for\
-                    the predicate {predicate['type']}")
-    if source != 'hypothesis':
+            if predicate_type not in schema['edges']:
+                edge = schema['edges'][predicate_type]
+
+                if source_type != edge['source'] and target_type != edge['target']:
+                    raise Exception(f"Invalid source and target for\
+                        the predicate {predicate['type']}")
         if check_disconnected_graph(request):
-            raise Exception("Disconnected subgraph found")
+            raise Exception("Graph is disconnected, please check the graph")
 
     return node_map
 

@@ -15,13 +15,13 @@ from app.persistence import AnnotationStorageService
 llm = app.config['llm_handler']
 EXP = os.getenv('REDIS_EXPIRATION', 3600) # expiration time of redis cache
 
-def handle_client_request(query, request, current_user_id, node_types):
+def handle_client_request(query, request, node_types):
     annotation_id = request.get('annotation_id', None)
     # check if annotation exist
 
     if annotation_id:
-        existing_query = AnnotationStorageService.get_user_query(
-            annotation_id, str(current_user_id), query[0])
+        existing_query = AnnotationStorageService.get_by_query(
+            annotation_id, query[0])
     else:
         existing_query = None
         
@@ -54,8 +54,7 @@ def handle_client_request(query, request, current_user_id, node_types):
             mimetype='application/json')
     elif annotation_id is None:
         title = llm.generate_title(query[0])
-        annotation = {"current_user_id": str(current_user_id),
-                      "query": query[0], "request": request,
+        annotation = {"query": query[0], "request": request,
                       "title": title, "node_types": node_types,
                       "status": TaskStatus.PENDING.value}
 
@@ -92,43 +91,6 @@ def handle_client_request(query, request, current_user_id, node_types):
             json.dumps({'annotation_id': str(annotation_id)}),
             mimetype='application/json'
         )
-
-def process_full_data(current_user_id, annotation_id):
-    cursor = AnnotationStorageService.get_by_id(annotation_id)
-
-    if cursor is None:
-        return None
-
-
-    query, title = cursor.query, cursor.title
-
-
-    try:
-        file_path = generate_file_path(
-            file_name=title, user_id=current_user_id, extension='xls')
-        exists = os.path.exists(file_path)
-
-        if exists:
-            file_path = adjust_file_path(file_path)
-            link = f'{request.host_url}{file_path}'
-
-            return link
-
-
-        # Run the query and parse the results
-        result = db_instance.run_query(query)
-        parsed_result = db_instance.convert_to_dict(
-            result, schema_manager.schema)
-
-        file_path = convert_to_csv(
-            parsed_result, user_id=current_user_id, file_name=title)
-        file_path = adjust_file_path(file_path)
-
-        link = f'{request.host_url}{file_path}'
-        return link
-
-    except Exception as e:
-        raise e
 
 def requery(annotation_id, query, request):
     #Event to track tasks

@@ -7,7 +7,6 @@ class Annotation(Schema):
 
     # Attributes
     id = None
-    user_id = None
     request = None
     query = None
     title = None
@@ -23,10 +22,6 @@ class Annotation(Schema):
 
     def __init__(self, **kwargs):
         self.schema = {
-            "user_id": {
-                "type": Types.String,
-                "required": True,
-            },
             "request": any,
             "query": {
                 "type": Types.String,
@@ -77,7 +72,7 @@ class Annotation(Schema):
         super().__init__(self.schema_name, self.schema, kwargs)
 
     def __str__(self):
-        return f"""user_id: {self.user_id}, request: {self.request}, 
+        return f"""request: {self.request}, 
         query: {self.query},
         title: {self.title}, summary: {self.summary},
         question: {self.question}, answer: {self.answer},
