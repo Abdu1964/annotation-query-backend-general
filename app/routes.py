@@ -4,7 +4,7 @@ import logging
 import json
 import os
 import threading
-from app import app, schema_manager, db_instance, socketio, redis_client
+from app import app, schema_manager, socketio, redis_client
 from app.lib import validate_request
 from flask_cors import CORS
 from flask_socketio import disconnect, join_room, send
@@ -16,7 +16,13 @@ from app.lib import Graph, heuristic_sort
 from app.annotation_controller import handle_client_request, requery
 from app.constants import TaskStatus
 from app.workers.task_handler import get_annotation_redis
-from app.persistence import AnnotationStorageService, SourceStorageService
+from app.persistence import AnnotationStorageService
+from app.services.cypher_generator import CypherQueryGenerator
+from app.services.metta_generator import MeTTa_Query_Generator
+from app import config
+import requests
+
+db_instance = app.config['db_instance']
 
 # Load environmental variables
 load_dotenv()
@@ -40,52 +46,29 @@ def get_schema_list():
     return Response(json.dumps(response, indent=4), mimetype='application/json')
 
 @app.route('/schema', methods=['GET'])
-def get_schema_by_source():
+def get_schema():
     try:
-        schema = schema_manager.schema_representation
-
         response = {'nodes': [], 'edges': []}
-
-        query_string = request.args.getlist("source")
-
-        try:
-            source = SourceStorageService.get()
-            print(source)
-        except Exception as e:
-            print(type(e))
         
-        if not source:
-            query_string = 'all'
-        else:
-            query_string = source['data_source']
-
-        if query_string == 'all':
-            response['nodes'] = schema['nodes']
-            response['edges'] = schema['edges']
-
-            return Response(json.dumps(response, indent=4), mimetype='application/json')
-
-        for schema_type in query_string:
-            source = schema_type.upper()
-            sub_schema = schema.get(source, None)
-
-            if sub_schema is None:
-                return jsonify({"error": "Invalid schema source"}), 400
-
-            for key, _ in sub_schema['edges'].items():
-                edge = sub_schema['edges'][key]
-                edge_data = {
-                    "label": schema['edges'][key]['output_label'],
-                    **edge
+        for schema in schema_manager.schema:
+            nodes = schema['nodes']
+            edges = schema['edges']
+            
+            for node in nodes:
+                node_input = {
+                    'label': node['label'],
+                    'properties': node['properties']
                 }
-                response['edges'].append(edge_data)
-                response['nodes'].append(schema['nodes'][edge['source']])
-                response['nodes'].append(schema['nodes'][edge['target']])
-
-            if len(response['edges']) == 0:
-                for node in sub_schema['nodes']:
-                    response['nodes'].append(schema['nodes'][node])
-
+                response['nodes'].append(node_input)
+                
+            for edge in edges:
+                edge_input = {
+                    'label': edge['label'],
+                    'source': edge['source'],
+                    'target': edge['target'],
+                    'properties': edge['properties']
+                }
+                response['edges'].append(edge_input)
         return Response(json.dumps(response, indent=4), mimetype='application/json')
     except Exception as e:
         logging.error(f"Error fetching schema: {e}")
@@ -146,7 +129,7 @@ def process_query():
         requests = data['requests']
 
         # Validate the request data before processing
-        node_map = validate_request(requests, schema_manager.schema_representation)
+        node_map = validate_request(requests, schema_manager.schema)
         if node_map is None:
             return jsonify(
                 {"error": "Invalid node_map returned by validate_request"}
@@ -291,7 +274,7 @@ def get_by_id(id):
         result = db_instance.run_query(query)
         graph_components = {"properties": properties}
         response_data = db_instance.parse_and_serialize(
-            result, schema_manager.schema_representation,
+            result, schema_manager.schema,
             graph_components, result_type='graph')
         graph = Graph()
         if (len(response_data['edges']) == 0):
@@ -426,43 +409,51 @@ def delete_many():
         logging.error(f"Error deleting annotations: {e}")
         return jsonify({"error": str(e)}), 500
 
-@app.route('/settings/data-source', methods=['POST'])
-def update_settings():
-    data = request.get_json()
-    
-    data_source = data.get('data_source', None)
-    
-    if data_source is None:
-        return jsonify({"error": "Missing data source"}), 400
-    
-    if isinstance(data_source, str):
-        if data_source.lower() == 'all':
-            SourceStorageService.upsert_by_id({'data_source': 'all'})
-
-            response_data = {
-                'message': 'Data source updated successfully',
-                'data_source': 'all'
-            }
-            formatted_response = json.dumps(response_data, indent=4)
-            return Response(formatted_response, mimetype='application/json')
-        else:
-            return jsonify({"error": "Invalid data source format"}), 400
-    
-    # check if the data source is valid
-    for ds in data_source:
-        if ds.upper() not in schema_manager.schema_representation:
-            return jsonify({"error": f"Invalid data source: {ds}"}), 400
-    
+@app.route('/annotation/load', methods=['GET'])
+def load_data():
     try:
-        SourceStorageService.upsert_by_id({'data_source': data_source})
+        # TODO: make a request to biocypher kg to get schema and load metta atomspace
+        url = os.getenv('BIOCYPHER_KG_URL')
         
-        response_data = {
-            'message': 'Data source updated successfully',
-            'data_source': data_source
+        if url is None:
+            raise Exception("BIOCYPHER_KG_URL is not set in the environment variables")
+        
+        # get file path and schema path 
+        response = requests.get(f'{url}/schema')
+
+
+        if response.status_code == 200:
+            data = response.json() 
+            schema_path = data['schema_path']
+            data_path = data['data_path']
+        else:
+            # Request failed
+            jsonify(f"Error: {response.status_code}"), 400
+        
+
+        # Load schema
+        schema_manager.load_schema(schema_path)
+        
+        # load database config
+
+        databases = {
+            "metta": lambda: MeTTa_Query_Generator(data_path),
+            "cypher": lambda: CypherQueryGenerator(data_path)
+            # Add other database instances here
         }
+
+        database_type = config['database']['type']
+        db_instance = databases[database_type]()
         
-        formatted_response = json.dumps(response_data, indent=4)
+        app.config['db_instance'] = db_instance
+
+        response = {
+            'message': 'Schema loaded and data loaded successfully',
+        }
+
+        formatted_response = json.dumps(response, indent=4)
+
         return Response(formatted_response, mimetype='application/json')
     except Exception as e:
-        logging.error(f"Error updating data source: {e}")
+        logging.error(f"Error loading schema: {e}")
         return jsonify({"error": str(e)}), 500

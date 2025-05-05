@@ -1,6 +1,6 @@
 import logging
 from flask import Response, request
-from app import app, db_instance, schema_manager
+from app import app, schema_manager
 import json
 import os
 import threading
@@ -111,8 +111,7 @@ def requery(annotation_id, query, request):
             generate_result(query, annotation_id, request, result_done, status=TaskStatus.COMPLETE.value)
         except Exception as e:
                 logging.error("Error generating result graph %s", e)
-      
-    
+
     result_generator = threading.Thread(
         name='result_generator', target=send_annotation)
     result_generator.start()

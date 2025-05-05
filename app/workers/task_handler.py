@@ -1,5 +1,5 @@
 from flask import request, Response
-from app import app, schema_manager, db_instance, socketio, redis_client, ThreadStopException
+from app import app, schema_manager, socketio, redis_client, ThreadStopException
 import logging
 import json
 import os
@@ -10,6 +10,7 @@ from app.constants import TaskStatus
 from app.persistence import AnnotationStorageService
 from pathlib import Path
 
+db_instance = app.config['db_instance']
 llm = app.config['llm_handler']
 EXP = os.getenv('REDIS_EXPIRATION', 3600) # expiration time of redis cache
 
@@ -175,7 +176,7 @@ def generate_result(query_code, annotation_id, requests, result_status, status=N
         graph_components = {"nodes": requests['nodes'], "predicates":
                             requests['predicates'], "properties": True}
         response = db_instance.parse_and_serialize(
-            response_data, schema_manager.schema_representation, graph_components, 'graph')
+            response_data, schema_manager.schema, graph_components, 'graph')
 
         graph = Graph()
         
@@ -274,7 +275,7 @@ def generate_total_count(count_query, annotation_id, requests, total_count_statu
                             "predicates": requests['predicates'],
                             "properties": False}
         response = db_instance.parse_and_serialize(
-            count_result, schema_manager.schema_representation, graph_components, 'count')
+            count_result, schema_manager.schema, graph_components, 'count')
 
         status = update_task(annotation_id)
 
@@ -375,7 +376,7 @@ def generate_label_count(count_query, annotation_id, requests, count_label_statu
                             "predicates": requests['predicates'],
                             "properties": False}
         response = db_instance.parse_and_serialize(
-            count_result, schema_manager.schema_representation, graph_components, 'count')
+            count_result, schema_manager.schema, graph_components, 'count')
         AnnotationStorageService.update(annotation_id,
                                {'node_count_by_label': response['node_count_by_label'],
                                 'edge_count_by_label': response['edge_count_by_label'],
