@@ -1,7 +1,6 @@
 from pymongoose.mongo_types import Types, Schema
 import datetime
 
-
 class Annotation(Schema):
     schema_name = 'annotation'
 
@@ -11,14 +10,13 @@ class Annotation(Schema):
     query = None
     title = None
     summary = None
-    question = None
-    answer = None
     node_count = None
     edge_count = None
     node_types = None
     node_count_by_label = None
     edge_count_by_label = None
     status = None
+    job_id = None
 
     def __init__(self, **kwargs):
         self.schema = {
@@ -57,6 +55,7 @@ class Annotation(Schema):
                 "required": True
             },
             "path_url": Types.String,
+            "job_id": Types.String,
             "created_at": {
                 "type": Types.Date,
                 "required": True,
@@ -72,12 +71,12 @@ class Annotation(Schema):
         super().__init__(self.schema_name, self.schema, kwargs)
 
     def __str__(self):
-        return f"""request: {self.request}, 
+        return f"""request: {self.request},
         query: {self.query},
         title: {self.title}, summary: {self.summary},
         question: {self.question}, answer: {self.answer},
         node_count: {self.node_count}, edge_count: {self.edge_count},
         node_count_by_label: {self.node_count_by_label},
         edge_count_by_label: {self.edge_count_by_label},
-        status: {self.status}
+        status: {self.status}, job_id: {self.job_id}
         """

@@ -6,12 +6,13 @@ services:
       dockerfile: Dockerfile
     volumes:
       - .:/app
+      - "${SCHEMA_DATA_VOLUME}"
     ports:
       - "${APP_PORT}:${APP_PORT}"
-    # for now use development server till we can figure out 
+    # for now use development server till we can figure out
     # a way to make it work with gunicorn
     # command: gunicorn -w 16 --bind 0.0.0.0:${APP_PORT} run:app
-    command: flask run --host=0.0.0.0 --port=${APP_PORT}
+    command: python run.py
     restart: always
     depends_on:
       - mongodb
@@ -33,7 +34,7 @@ services:
   redis:
     image: redis:latest
     ports:
-      - "6380:6379"
+      - "6390:6379"
     restart: always
     volumes:
       - redis_data:/data

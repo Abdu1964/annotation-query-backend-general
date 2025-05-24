@@ -51,7 +51,7 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
     def query_Generator(self, requests ,node_map, limit=None, node_only=False):
         nodes = requests['nodes']
         predicate_map = {}
-        
+
         if "predicates" in requests and len(requests["predicates"]) > 0:
             predicates = requests["predicates"]
 
@@ -67,8 +67,8 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
                     predicate_map[predicate['predicate_id']] = predicate
         else:
             predicates = None
-            
-            
+
+
         match_preds = []
         return_preds = []
         node_representation = ''
@@ -76,7 +76,7 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
         match_clause = '''!(match &space (,'''
         return_clause = ''' ('''
         metta_output = ''
- 
+
         # if there is no predicate
         if not predicates:
             for node in nodes:
@@ -94,17 +94,17 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
                     else:
                         match_preds.append(self.construct_node_representation(node, node_identifier))
                     return_preds.append(f'({node_type} {node_identifier})')
-                    
+
             query_clause = {
                 "match_preds": match_preds,
-                "return_preds": return_preds 
+                "return_preds": return_preds
             }
-            
+
             if node_only:
                 queries = []
                 for i, match_query in enumerate(match_preds):
                     queries.append(f'{match_clause} {match_query}) ({return_preds[i]}))')
-                    
+
                 queries = ' '.join(queries)
                 return [queries, None, None]
 
@@ -112,6 +112,7 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
             match_clause += ' '.join(match_preds)
             return_clause += ' '.join(return_preds)
             metta_output += f'{match_clause}){return_clause}))'
+
             return [metta_output, count_query[0], count_query[1]]
 
         for predicate in predicates:
@@ -138,14 +139,14 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
             else:
                 target = f'({str(target_node["type"])} {str(target_node["id"])})'
 
-            
+
             # Add relationship
             match_preds.append(f'{node_representation} ({predicate_type} {source} {target})')
             return_preds.append((predicate_type, source, target))
 
         query_clause = {
             "match_preds": match_preds,
-            "return_preds": return_preds 
+            "return_preds": return_preds
         }
         count = self.count_query_generator(query_clause, node_only=False)
         match_clause += ' '.join(match_preds)
@@ -171,26 +172,36 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
             else:
                 predicate_type, source, target = returns
                 return_clause.append(f'((edge {predicate_type}) (node {source}) (node {target}))')
-                
-            
+
+
         output += ' '.join(return_clause)
-        
+
         metta_output += f'{match_clause}){output}))'
-        
+
         total_count_query = f'''!(total_count (collapse {metta_output}))'''
         lable_count_query = f'''!(label_count (collapse {metta_output}))'''
 
         return [total_count_query, lable_count_query]
 
-        
+
     def run_query(self, query_code, stop_event=True):
         return self.metta.run(query_code)
 
     def parse_and_serialize(self, input, schema, graph_components, result_type):
         if result_type == 'graph':
-            result = self.prepare_query_input(input, schema)
-            
-            result = self.parse_and_serialize_properties(result, graph_components, result_type)
+            query, result = self.prepare_query_input(input, schema)
+            tuples = metta_seralizer(result[0])
+
+            if not tuples:
+                nodes, edges = self.parse_and_seralize_no_properties(query)
+                return {"nodes": nodes, "edges": edges,
+                        "node_count": 0,
+                        "edge_count": 0,
+                        "node_count_by_label": [],
+                        "edge_count_by_label": []
+                }
+            else:
+                result = self.parse_and_serialize_properties(result, graph_components, result_type)
             return result
         else:
             (_,_,_,_, meta_data) = self.process_result(input, graph_components, result_type)
@@ -200,7 +211,39 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
                 "node_count_by_label": meta_data.get('node_count_by_label', []),
                 "edge_count_by_label": meta_data.get('edge_count_by_label', []),
             }
-        
+
+    def parse_and_seralize_no_properties(self, results):
+        nodes = set()
+        edges = []
+
+        for result in results:
+            nodes.add(result['source'])
+            nodes.add(result['target'])
+
+            source_label = result['source'].split(' ')[0]
+            target_label = result['target'].split(' ')[0]
+            edges.append({
+                "data": {
+                    "id": self.generate_id(),
+                    "edge_id": f'{source_label}_{result["predicate"]}_{target_label}',
+                    "label": result['predicate'],
+                    "source": result['source'],
+                    "target": result['target']
+                }
+            })
+
+        nodes_list = []
+
+        for node in nodes:
+            nodes_list.append({
+                "data": {
+                    "id": node,
+                    "type": node.split(' ')[0]
+                }
+            })
+
+        return nodes_list, edges
+
     def parse_and_serialize_properties(self, input, graph_components, result_type):
         (nodes, edges, _, _, meta_data) = self.process_result(input, graph_components, result_type)
         return {"nodes": nodes[0], "edges": edges[0],
@@ -212,14 +255,14 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
 
     def get_node_properties(self, results, schema):
         metta = ('''!(match &space (,''')
-        output = (''' (,''') 
+        output = (''' (,''')
         nodes = set()
         for result in results:
             source = result['source']
             source_node_type = result['source'].split(' ')[0]
 
             if source not in nodes:
-                for property, _ in schema[source_node_type]['properties'].items():
+                for property in schema['nodes'][source_node_type]['properties']:
                     id = self.generate_id()
                     metta += " " + f'({property} ({source}) ${id})'
                     output += " " + f'(node {property} ({source}) ${id})'
@@ -229,20 +272,20 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
                 target = result['target']
                 target_node_type = result['target'].split(' ')[0]
                 if target not in nodes:
-                    for property, _ in schema[target_node_type]['properties'].items():
+                    for property in schema['nodes'][target_node_type]['properties']:
                         id = self.generate_id()
                         metta += " " + f'({property} ({target}) ${id})'
                         output += " " + f'(node {property} ({target}) ${id})'
                     nodes.add(target)
 
                 predicate = result['predicate']
-                predicate_schema = f'{source_node_type}_{predicate}_{target_node_type}'
-                for property, _ in schema[predicate_schema]['properties'].items():
+                for property in schema['edges'][predicate]['properties']:
                     random = self.generate_id()
                     metta += " " + f'({property} ({predicate} ({source}) ({target})) ${random})'
-                    output +=  " " + f'(edge {property} ({predicate} ({source}) ({target})) ${random})' 
+                    output +=  " " + f'(edge {property} ({predicate} ({source}) ({target})) ${random})'
 
         metta+= f" ) {output}))"
+
         return metta
 
     def convert_to_dict(self, results, schema=None):
@@ -275,7 +318,7 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
                 node_and_edge_count, count_by_label, graph_components)
 
         return (nodes, edges, node_to_dict, edge_to_dict, meta_data)
-        
+
     def process_result_graph(self, results, graph_components):
         nodes = {}
         relationships_dict = {}
@@ -304,7 +347,7 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
                         "id": f"{src_type} {src_value}",
                         "type": src_type,
                     }
-                
+
                 if graph_components['properties']:
                      nodes[(src_type, src_value)][predicate] = tgt
 
@@ -326,12 +369,12 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
                         "source": f"{source} {source_id}",
                         "target": f"{target} {target_id}",
                     }
-                
+
                 if property_name == "source":
                     relationships_dict[key]["source_data"] = value
                 else:
                     relationships_dict[key][property_name] = value
-                
+
                 if predicate not in edge_type:
                     edge_type.add(predicate)
                     edge_to_dict[predicate] = []
@@ -344,13 +387,13 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
         node_result.append(node_list)
         edge_result.append(relationship_list)
         return (node_result, edge_result, node_to_dict, edge_to_dict)
-    
+
     def process_result_count(self, node_and_edge_count, count_by_label, graph_components):
         if len(node_and_edge_count) != 0:
             node_and_edge_count = node_and_edge_count[0].get_object().value
         node_count_by_label = []
         edge_count_by_label = []
-        
+
         if len(count_by_label) != 0:
             count_by_label = count_by_label[0].get_object().value
             node_label_count = count_by_label['node_label_count']
@@ -359,18 +402,18 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
             # update the way node count by label and edge count by label are represented
             for key, value in node_label_count.items():
                 node_count_by_label.append(
-                    {'label': key, 'count': value['count']}) 
+                    {'label': key, 'count': value['count']})
             for key, value in edge_label_count.items():
                 edge_count_by_label.append(
                     {'label': key, 'count': value['count']})
-            
+
         meta_data = {
             "node_count": node_and_edge_count.get('total_nodes', 0),
             "edge_count": node_and_edge_count.get('total_edges', 0),
             "node_count_by_label": node_count_by_label if node_count_by_label else [],
             "edge_count_by_label": edge_count_by_label if edge_count_by_label else []
         }
-        
+
         return meta_data
 
     def prepare_query_input(self, inputs, schema):
@@ -394,5 +437,6 @@ class MeTTa_Query_Generator(QueryGeneratorInterface):
                     "target": f"{tgt_type} {tgt_id}"
                     })
         query = self.get_node_properties(result, schema)
-        result = self.run_query(query)
-        return result
+
+        result_properties = self.run_query(query)
+        return (result, result_properties)
