@@ -14,65 +14,32 @@ load_dotenv()
 
 class SchemaManager:
     def __init__(self):
-        self.schema_path = Path(__file__).parent / ".." / ".." / "config" / "schema"
-        self.schema_list = self.get_schema_list()
-        self.schema_representation = self.get_schema_representation(self.schema_list)
-    
-    def get_schema_list(self):
-        schema_list = []
-        
-        for file in os.listdir(self.schema_path):
-            file_name = os.path.splitext(file)[0]
-            schema_list.append(file_name)
-            
-        return schema_list
-    
-    def get_schema_representation(self, schema_list: list):
-        schema_representation = {"nodes": {}, "edges": {}}
-        
-        for schema in schema_list:
-            schema_abs_path = str((self.schema_path / f"{schema}.yaml").resolve())
-            with open(schema_abs_path, 'r') as file:
-                file_output = yaml.safe_load(file)
-                nodes = file_output.get('nodes', {})
-                edges = file_output.get('relationships', {})
-                name = file_output.get('name', None).upper()
-                
-                if name:
-                    if name not in schema_representation:
-                        schema_representation[name]= {'nodes': set(), 'edges': {}}
+        self.schema = {'nodes': {}, 'edges': {}}
 
-                    for _, value in nodes.items():
-                        if 'input_label' in value:
-                            key = value['input_label']
-                        else:
-                            key = value['output_label']
+    def load_schema(self, schema_path):
+        self.scheam = {'nodes': {}, 'edges': {}}
+        try:
+            with open(schema_path, 'r') as file:
+                raw_schema = json.load(file)
+        except FileNotFoundError:
+            raise FileNotFoundError(f"Schema file not found: {schema_path}")
 
-                        key = key
-                        schema_representation[name]['nodes'].add(key)
-                        if key not in schema_representation['nodes']:
-                            schema_representation['nodes'][key] = {}
-                        node_props = {
-                            "label": value.get("input_label", ''),
-                            "properties": value.get("properties", {}),
-                        }
-                        schema_representation['nodes'][key].update(node_props)
+        vertex_label = raw_schema.get('vertex_labels', None)
+        edge_label = raw_schema.get('edge_labels', None)
 
-                    for _, value in edges.items():
-                        if 'output_label' in value:
-                            key = value['output_label']
-                        else:
-                            key = value['input_label']
-                        # Global edge definition (accumulated across all schemas)
-                        if key not in schema_representation['edges']:
-                            schema_representation['edges'][key] = {}
+        if vertex_label is None:
+            raise ValueError("Vertex label is missing in the schema")
+        if edge_label is None:
+            raise ValueError("Edge label is missing in the schema")
 
-                        # Schema-specific edge definition (per schema name)
-                        if key not in schema_representation[name]['edges']:
-                            schema_representation[name]['edges'][key] = {'source': '', 'target': ''}
+        for node in vertex_label:
+            key = node['name']
+            self.schema['nodes'][key] = {}
+            self.schema['nodes'][key]['properties'] = node.get('properties', {})
 
-                        schema_representation['edges'][key].update(value)
-                        schema_representation[name]['edges'][key]['source'] = value.get('source', '')
-                        schema_representation[name]['edges'][key]['target'] = value.get('target', '')
-
-        return schema_representation   
+        for edge in edge_label:
+            key = edge['name']
+            self.schema['edges'][key] = {}
+            self.schema['edges'][key]['properties'] = edge.get('properties', {})
+            self.schema['edges'][key]['source'] = edge.get('source_label', None)
+            self.schema['edges'][key]['target'] = edge.get('target_label', None)

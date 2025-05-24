@@ -15,18 +15,19 @@ class Graph:
     def group_node_only(self, graph, request):
         nodes = graph['nodes']
         new_graph = {'nodes': [], 'edges': []}
-        
+
         node_map_by_label = {}
-        
+
         request_nodes = request['nodes']
-        
+
         for node in request_nodes:
             node_map_by_label[node['type']] = []
-            
+
         for node in nodes:
             if node['data']['type'] in node_map_by_label:
-                node_map_by_label[node['data']['type']].append(node)
-        
+                node_with_out_data_filed = node['data']
+                node_map_by_label[node['data']['type']].append(node_with_out_data_filed)
+
         for node_type, nodes in node_map_by_label.items():
             name = f"{len(nodes)} {node_type} nodes"
             new_node = {

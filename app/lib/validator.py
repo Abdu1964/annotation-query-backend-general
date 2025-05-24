@@ -23,7 +23,7 @@ def validate_request(request, schema):
             raise Exception("type is required")
         if 'node_id' not in node or node['node_id'] == "":
             raise Exception("node_id is required")
-        
+
         # format the node id into approperiate format
         node_id = node['node_id']
         node['node_id'] = clean_string(node_id)
@@ -68,10 +68,10 @@ def validate_request(request, schema):
                 raise Exception("source is required")
             if 'target' not in predicate or predicate['target'] == "":
                 raise Exception("target is required")
-            
+
             predicate['source'] = clean_string(predicate['source'])
             predicate['target'] = clean_string(predicate['target'])
-            
+
             # Handle cases validation for the ai-assistant
             if 'predicate_id' not in predicate:
                 predicate['predicate_id'] = f'p{i}'

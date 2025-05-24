@@ -4,7 +4,6 @@ import logging
 from pymongo import MongoClient
 from pymongoose.methods import set_schemas
 from app.models.annotation import Annotation
-from app.models.source import Source
 
 MONGO_URI = os.environ.get("MONGO_URI")
 
@@ -15,13 +14,12 @@ def mongo_init():
     global mongo_db
 
     client = MongoClient(MONGO_URI)
-    db = client.test
+    db = client.annotation_query_backend_general
     try:
         # Define the shcemas
 
         schemas = {
             "annotation": Annotation(empty=True).schema,
-            "source": Source(empty=True).schema,
         }
 
         set_schemas(db, schemas)
