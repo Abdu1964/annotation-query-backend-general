@@ -435,12 +435,17 @@ def load_data():
         if "folder_id" not in data:
             return jsonify({"error": "folder_id is required"}), 400
 
+        if "type" not in data:
+            return jsonify({"error": "type is required"}), 400
+
+        type = data["type"]
         folder_id = data["folder_id"]
 
         schema_path = f"/shared/output/{folder_id}/schema.json"
         data_path = f"/shared/output/{folder_id}/"
 
         app.config["job_id"] = folder_id
+
         # Load schema
         schema_manager.load_schema(schema_path)
 
@@ -451,8 +456,11 @@ def load_data():
             # Add other database instances here
         }
 
-        database_type = config["database"]["type"]
+        database_type = config["database"][type]
         db_instance = databases[database_type]()
+
+        if type == 'cypher':
+            db_instance.set_tenant_id(folder_id)
 
         app.config["db_instance"] = db_instance
 
