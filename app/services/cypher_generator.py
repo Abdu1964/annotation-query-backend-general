@@ -23,11 +23,15 @@ class CypherQueryGenerator(QueryGeneratorInterface):
             os.getenv('NEO4J_URI'),
             auth=(os.getenv('NEO4J_USERNAME'), os.getenv('NEO4J_PASSWORD'))
         )
+        self.tenant_id = None
         # self.dataset_path = dataset_path
         # self.load_dataset(self.dataset_path)
 
     def close(self):
         self.driver.close()
+
+    def set_tenant_id(self, tenant_id):
+        self.tenant_id = tenant_id
 
     def load_dataset(self, path: str) -> None:
         if not os.path.exists(path):
@@ -143,7 +147,7 @@ class CypherQueryGenerator(QueryGeneratorInterface):
 
                 source_match = self.match_node(source_node, source_var)
                 target_match = self.match_node(target_node, target_var)
-                
+
                 tmp_where_preds = []
                 if source_var not in node_ids:
                     tmp_where_preds.extend(self.where_construct(source_node, source_var))
@@ -153,37 +157,37 @@ class CypherQueryGenerator(QueryGeneratorInterface):
                     tmp_where_preds.extend(self.where_construct(target_node, target_var))
                     where_preds.extend(
                         self.where_construct(target_node, target_var))
-                
+
                 return_preds.append(predicate_id)
                 node_ids.add(source_var)
                 node_ids.add(target_var)
-                
+
                 match_preds.append(
                     f"{source_match}-[{predicate_id}:{predicate_type}]->{target_match}"
                 )
-                
+
                 # Construct the MATCH clause
                 match_clause = f"MATCH {source_match}-[{predicate_id}:{predicate_type}]->{target_match}"
-                    
+
                 # Construct the WHERE clause if there are conditions
                 where_clause = f"WHERE {' AND '.join(tmp_where_preds)}" if len(tmp_where_preds) >= 1 else ''
-                
+
                 if i == len(predicates) - 1:
                     # Construct the RETURN clause
                     return_clause = f"RETURN {', '.join(return_preds)}, {', '.join(node_ids)}"
-                    
+
                     # Combine all clauses into a single query
                     clause_list.append(f"{match_clause} {where_clause} {return_clause}")
                 else:
                     with_clause = f"WITH {', '.join(return_preds)}, {', '.join(node_ids)}"
-                    
-                    clause_list.append(f"{match_clause} {where_clause} {with_clause}")      
+
+                    clause_list.append(f"{match_clause} {where_clause} {with_clause}")
 
             list_of_node_ids = list(node_ids)
             list_of_node_ids.sort()
             full_return_preds = return_preds + list_of_node_ids
 
-            
+
             cypher_query = ' '.join(clause_list)
             cypher_queries.append(cypher_query)
             query_clauses = {
@@ -303,7 +307,7 @@ class CypherQueryGenerator(QueryGeneratorInterface):
 
     def limit_query(self, limit):
         '''
-        for now remove the limit from the backend 
+        for now remove the limit from the backend
         and handle it from the client side
         '''
         # if limit:
@@ -316,9 +320,9 @@ class CypherQueryGenerator(QueryGeneratorInterface):
 
     def match_node(self, node, var_name):
         if node['id']:
-            return f"({var_name}:{node['type']} {{id: '{node['id']}'}})"
+            return f"({var_name}:{node['type']} {{id: '{node['id']}', {{tenant_id: '{self.tenant_id}'}}}})"
         else:
-            return f"({var_name}:{node['type']})"
+            return f"({var_name}:{node['type']} {{tenant_id: '{self.tenant_id}'}})"
 
     def where_construct(self, node, var_name):
         properties = []
