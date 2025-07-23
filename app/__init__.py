@@ -68,3 +68,7 @@ else:
 # Import routes at the end to avoid circular imports
 from app import routes
 from app.annotation_controller import handle_client_request, requery
+
+@app.route('/')
+def home():
+    return 'Hello from Flask!'
