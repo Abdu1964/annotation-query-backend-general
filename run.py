@@ -23,4 +23,8 @@ log_file = os.path.join(log_dir, 'error.log')
 logging.basicConfig(filename=log_file, level=logging.DEBUG)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=False, host='0.0.0.0', port=APP_PORT)
+    print(f"Starting server on port {os.getenv('APP_PORT', 5000)}")  # Add debug logging
+    socketio.run(app, 
+                 host='0.0.0.0', 
+                 port=int(os.getenv('APP_PORT', 5000)),
+                 allow_unsafe_werkzeug=True)  # Force allow in container
