@@ -15,8 +15,8 @@ _Supported OS:_ **Linux & Mac**
 1. **Clone the Repository**:
 
    ```sh
-   git clone https://github.com/rejuve-bio/annotation-query-backend.git
-   cd annotation-query-backend
+   git clone https://github.com/rejuve-bio/annotation-query-backend-general.git
+   cd annotation-query-backend-general
    ```
 
 2. **Set Up the Virtual Environment**:
@@ -38,6 +38,7 @@ _Supported OS:_ **Linux & Mac**
    NEO4J_URL=your_neo4j_url
    NEO4J_USERNAME =your_neo4j_user
    NEO4J_PASSWORD=your_neo4j_password
+   SCHEMA_DATA_VOLUME= # the file path where the output of the custom atomspace builder is stored
    ```
 5. **Flask-Mail Configuration**:
    Add the following environment variables for email functionality:
@@ -109,20 +110,7 @@ flask run
 
 **Build and Run the Docker Container**
 
-1. **Setup Required Folders**:
-   Ensure the following folders are present in the root directory and contain the necessary data:
-
-   metta_data: Folder for storing Metta data.
-   cypher_data: Folder for storing Neo4j data.
-
-2. **Configure Environment Variables**:
-   Create a `.env` file in the root folder with the following content:
-   ```plaintext
-   NEO4J_URL=your_neo4j_url
-   NEO4J_USERNAME =your_neo4j_user
-   NEO4J_PASSWORD=your_neo4j_password
-   ```
-3. **Run**:
+**Run**:
    Ensure you are in the root directory of the project and then run:
 
    ```sh
