@@ -411,11 +411,8 @@ def load_data():
         type = data["type"]
         folder_id = data["folder_id"]
 
-        # schema_path = f"/shared/output/{folder_id}/schema.json"
-        # data_path = f"/shared/output/{folder_id}/"
-
-        schema_path = f"/home/deadstar/Downloads/{folder_id}/schema.json"
-        data_path = f"/home/deadstar/Downloads/{folder_id}/"
+        schema_path = f"/shared/output/{folder_id}/schema.json"
+        data_path = f"/shared/output/{folder_id}/"
 
         app.config["job_id"] = folder_id
 
