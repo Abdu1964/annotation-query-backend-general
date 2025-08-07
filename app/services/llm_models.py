@@ -10,8 +10,8 @@ class LLMInterface:
 class GeminiModel(LLMInterface):
     def __init__(self, api_key: str):
         self.api_key = api_key
-        self.api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent"
-    
+        self.api_url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent"
+
     def generate(self, prompt: str) -> Dict[str, Any]:
         headers = {
             "Content-Type": "application/json"
@@ -28,7 +28,7 @@ class GeminiModel(LLMInterface):
         response.raise_for_status()
 
         content = response.json()['candidates'][0]['content']['parts'][0]['text']
-    
+
         json_content = self._extract_json_from_codeblock(content)
         try:
             return json.loads(json_content)
@@ -50,7 +50,7 @@ class OpenAIModel(LLMInterface):
         self.api_key = api_key
         self.model_name = model_name
         openai.api_key = self.api_key
-    
+
     def generate(self, prompt: str) -> Dict[str, Any]:
         response = openai.chat.completions.create(
             model=self.model_name,
@@ -59,7 +59,7 @@ class OpenAIModel(LLMInterface):
             max_tokens=1000
         )
         content = response.choices[0].message.content
-        
+
         json_content = self._extract_json_from_codeblock(content)
         try:
             return json.loads(json_content)

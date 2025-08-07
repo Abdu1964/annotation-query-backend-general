@@ -68,18 +68,16 @@ def handle_client_request(query, request, node_types):
             mimetype="application/json",
         )
     elif annotation_id is None:
-        title = llm.generate_title(query[0])
+        title = llm.generate_title(str(query[0]))
         annotation = {
-            "query": query[0],
+            "query": str(query[0]),
             "request": request,
             "title": title,
             "node_types": node_types,
             "status": TaskStatus.PENDING.value,
             "job_id": app.config["job_id"],
         }
-
         annotation_id = AnnotationStorageService.save(annotation)
-
         args = {
             "all_status": {
                 "result_done": result_done,

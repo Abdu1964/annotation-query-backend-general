@@ -9,6 +9,7 @@ from app.lib import Graph
 from app.constants import TaskStatus
 from app.persistence import AnnotationStorageService
 from pathlib import Path
+import traceback
 
 llm = app.config["llm_handler"]
 EXP = os.getenv("REDIS_EXPIRATION", 3600)  # expiration time of redis cache
@@ -277,6 +278,7 @@ def generate_result(query_code, annotation_id, requests, result_status, status=N
         )
         result_status.set()
         logging.error("Error generating result graph %s", e)
+        traceback.print_exc()
 
 
 def generate_total_count(
@@ -329,8 +331,41 @@ def generate_total_count(
 
     try:
         db_instance = app.config["db_instance"]
-
         total_count = db_instance.run_query(count_query, stop_event)
+        # do for mork
+        if app.config["db_type"] == "mork":
+            result = db_instance.parse_and_serialize(total_count, schema_manager.schema, {
+                "properties": True
+            }, 'graph')
+
+            count_result = [result, {}]
+
+            total_count = db_instance.parse_and_serialize(count_result, schema_manager.schema, {}, 'count')
+
+            status = update_task(annotation_id)
+
+            AnnotationStorageService.update(
+                 annotation_id,
+                 {
+                     "node_count": total_count["node_count"],
+                     "edge_count": total_count["edge_count"],
+                     "status": status,
+                 },
+             )
+
+            socketio.emit(
+                 "update",
+                 {
+                     "status": status,
+                     "update": {
+                         "node_count": total_count["node_count"],
+                         "edge_count": total_count["edge_count"],
+                     },
+                 },
+                 to=str(annotation_id),
+            )
+            total_count_status.set()
+            return
 
         if len(total_count) == 0:
             status = update_task(annotation_id)
@@ -406,6 +441,7 @@ def generate_total_count(
         )
         total_count_status.set()
         logging.error("Error generating total count %s", e)
+        traceback.print_exc()
 
 
 def generate_empty_lable_count(requests):
@@ -476,6 +512,41 @@ def generate_label_count(
             return
 
         db_instance = app.config["db_instance"]
+        # do for mork
+        if app.config["db_type"] == "mork":
+            count_result = db_instance.run_query(count_query, stop_event)
+            result = db_instance.parse_and_serialize(count_result, schema_manager.schema, {
+                "properties": True
+            }, 'graph')
+
+            count_result = [{}, result]
+
+            total_count = db_instance.parse_and_serialize(count_result, schema_manager.schema, {}, 'count')
+
+            status = update_task(annotation_id)
+
+            AnnotationStorageService.update(
+                 annotation_id,
+                 {
+                     "node_count_by_label": total_count["node_count_by_label"],
+                     "edge_count_by_label": total_count["edge_count_by_label"],
+                     "status": status,
+                 },
+             )
+
+            socketio.emit(
+                 "update",
+                 {
+                     "status": status,
+                     "update": {
+                         "node_count_by_label": total_count["node_count_by_label"],
+                         "edge_count_by_label": total_count["edge_count_by_label"],
+                     },
+                 },
+                 to=str(annotation_id),
+            )
+            count_label_status.set()
+            return
 
         label_count = db_instance.run_query(count_query, stop_event)
 
@@ -538,6 +609,7 @@ def generate_label_count(
         socketio.emit("update", {"status": TaskStatus.FAILED.value, "update": update})
         count_label_status.set()
         logging.error("Error generating label count %s", e)
+        traceback.print_exc()
 
 
 def start_thread(annotation_id, args):

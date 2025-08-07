@@ -47,7 +47,9 @@ class Graph:
         Each connection is keyed by the edge label and stores whether
         the node is the source, and a set of node IDs it connects to.
         '''
+        print("Graph: ", graph)
         node_to_id_map = {node["data"]["id"]: node["data"] for node in graph.get("nodes", [])}
+        print("NODE ID TO MAP: ", node_to_id_map)
         node_mapping = {}
 
         def add_to_map(edge, node_role):
@@ -75,6 +77,7 @@ class Graph:
         Returns a new graph where groups of nodes have been merged into a single node.
         """
         node_mapping, node_to_id_map = self.get_node_to_connections_map(graph)
+        print("NODE MAPPING : ", node_mapping, flush=True)
         map_string = {}  # Maps a hash to a group { connections, nodes }
         ids = {}         # Maps each original node ID to its group hash
 
