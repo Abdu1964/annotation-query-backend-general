@@ -5,6 +5,9 @@ from pathlib import Path
 from hyperon import MeTTa
 from .metta import metta_seralizer
 from app import app
+from dotenv import load_dotenv
+
+load_dotenv()
 
 class MorkQueryGenerator:
     def __init__(self, dataset_path):
@@ -14,7 +17,8 @@ class MorkQueryGenerator:
         self.load_dataset(dataset_path)
 
     def connect(self):
-        server = ManagedMORK.connect(url='http://127.0.0.1:8231')
+        mork_url = os.getenv('MORK_URL')
+        server = ManagedMORK.connect(url=mork_url)
         return server
 
     def clear_space(self):
