@@ -38,6 +38,7 @@ _Supported OS:_ **Linux & Mac**
    NEO4J_URL=your_neo4j_url
    NEO4J_USERNAME =your_neo4j_user
    NEO4J_PASSWORD=your_neo4j_password
+   MORK_URL=your_mork_url
    SCHEMA_DATA_VOLUME= # the file path where the output of the custom atomspace builder is stored
    ```
 5. **Flask-Mail Configuration**:
@@ -127,7 +128,7 @@ flask run
     docker-compose up --build
     ```
    This command will build the Flask app's Docker image, set up MongoDB with data persistence, and configure Caddy as the reverse proxy.
-   
+
    ### Accessing the Application
 
       - Flask App: Access the application through Caddy on http://localhost:5000.
@@ -151,7 +152,7 @@ Make sure you have the following installed:
 - Docker Compose
 - Bash shell (default on most Unix/Linux systems)
 
-There should be this environment variable in your .env file 
+There should be this environment variable in your .env file
    ```bash
    APP_PORT=<the port on which the application will be exposed>
 
