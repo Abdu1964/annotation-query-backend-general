@@ -14,7 +14,7 @@ class MorkQueryGenerator:
         self.load_dataset(dataset_path)
 
     def connect(self):
-        server = ManagedMORK.connect(url='http://127.0.0.1:8000')
+        server = ManagedMORK.connect(url='http://127.0.0.1:8231')
         return server
 
     def clear_space(self):
@@ -167,6 +167,9 @@ class MorkQueryGenerator:
                     "target": f"{tgt_type} {tgt_id}"
                     })
 
+        if len(result) == 0:
+            return "()", [[]]
+
         query = self.get_node_properteis(result, schema)
 
         res = self.run_query(query)
@@ -256,6 +259,8 @@ class MorkQueryGenerator:
         edges = []
 
         for result in results:
+            if len(result) == 0:
+                return [], []
             nodes.add(result['source'])
             nodes.add(result['target'])
 
