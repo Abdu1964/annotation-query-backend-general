@@ -1,23 +1,24 @@
-### Annotaion Service
+### Annotation Service
 
-backend API.
+Backend API.
 
 _Supported OS:_ **Linux & Mac**
 
 ## Prerequisites
 
-- Docker
+- Docker  
 - Neo4j or Neo4j Aura account
-- Mongodb database
+- MORK server running
+- MongoDB database  
 
-**Follow these steps to run :**
+**Follow these steps to run:**
 
 1. **Clone the Repository**:
 
    ```sh
    git clone https://github.com/rejuve-bio/annotation-query-backend-general.git
    cd annotation-query-backend-general
-   ```
+
 
 2. **Set Up the Virtual Environment**:
 
@@ -34,201 +35,133 @@ _Supported OS:_ **Linux & Mac**
 
 4. **Configure Environment Variables**:
    Create a `.env` file in the root folder with the following content:
+
    ```plaintext
    NEO4J_URL=your_neo4j_url
-   NEO4J_USERNAME =your_neo4j_user
+   NEO4J_USERNAME=your_neo4j_user
    NEO4J_PASSWORD=your_neo4j_password
    MORK_URL=your_mork_url
    SCHEMA_DATA_VOLUME= # the file path where the output of the custom atomspace builder is stored
-   ```
-5. **Flask-Mail Configuration**:
-   Add the following environment variables for email functionality:
-   `MAIL_SERVER`: The address of the mail server that the application will use to send emails (e.g., smtp.gmail.com for Gmail).
-
-   `MAIL_PORT`: The port number used by the mail server. Common ports include 587 for TLS (Transport Layer Security) or 465 for SSL (Secure Sockets Layer).
-
-   `MAIL_USE_TLS`: If set to True, this enables Transport Layer Security (TLS) for securing the email transmission. Typically used with port 587.
-
-   `MAIL_USE_SSL`: If set to True, this enables SSL (Secure Sockets Layer) for securing the email transmission. Typically used with port 465. It is not used when MAIL_USE_TLS is enabled
-
-   `MAIL_USERNAME`: The email account username that will be used to authenticate with the mail serve
-
-   `MAIL_PASSWORD`: The password or app-specific password (for services like Gmail) for the mail account used for sending emails.
-
-   `MAIL_DEFAULT_SENDER`: The default email address that will appear in the "From" field of outgoing emails if the sender is not specified in the email message.
-
-   ```plaintext
-    MAIL_SERVER=smtp.example.com
-    MAIL_USERNAME=your_email_username
-    MAIL_PASSWORD=your_email_password
-    MAIL_DEFAULT_SENDER=your_default_sender@example.com
-    MAIL_USE_TLS=True/False
-    MAIL_USE_SSL=True/False
-    MAIL_PORT=port number
+   MONGO_URI=your_mongodb_url
+   LLM_MODEL=openai|gemini
+   OPENAI_API_KEY=your_openai_api_key_if_applicable
+   GEMINI_API_KEY=your_gemini_api_key_if_applicable
    ```
 
-6. **Setup Required Folders**:
-   Ensure the following folders are present in the root directory and contain the necessary data:
-
-   metta_data: Folder for storing Metta data.
-   cypher_data: Folder for storing Neo4j data.
-
-
-7. **Choose Your Database Type**
-   In the config directory modify config.yaml to change between databses.
-
-   - To use Metta, set the type to 'metta'.
-   - To use Neo4j, set the type to 'cypher'.
-
-   Example
-
-   ```config
-   database
-    type = cypher  # Change to 'metta' if needed
-   ```
-8. **Set Up MongoDB Database and LLM Keys**:
-
-   Configure the `.env` file with the following settings:
-
-   - Set the `MONGO_URI` to your MongoDB database URL, where the history will be stored:
-
-     ```plaintext
-     MONGO_URI=your_mongodb_url
-     ```
-
-   - For title generation and graph summarization, set the `LLM_MODEL` in the `.env` file to specify the large language model:
-
-     - If `LLM_MODEL` is set to `openai`, the application will use the `OPENAI_API_KEY` from the `.env` file.
-     - If `LLM_MODEL` is set to `gemini`, the application will use the `GEMINI_API_KEY` from the `.env` file.
-
-9. **Run the Application**:
-
-```sh
-flask run
-```
-
-# Alternatively, you can use Docker to run the application:
-
-**Build and Run the Docker Container**
-
-**Run**:
-   Ensure you are in the root directory of the project and then run:
+7. **Run the Application**:
 
    ```sh
-   docker build -t app .
-   docker run app
+   flask run
    ```
 
-   This will build the Docker image and run the container, exposing the application on port 5000.
+---
 
-# Another Alternative, you can use Docker compose file to run the applicaton:
-  - Build and start the services with Docker Compose:
+## API Documentation
 
-    ```bash
-    docker-compose up --build
-    ```
-   This command will build the Flask app's Docker image, set up MongoDB with data persistence, and configure Caddy as the reverse proxy.
+* **Load Atomspace**
 
-   ### Accessing the Application
+  Endpoint: `/annotation/load`
+  Method: `POST`
 
-      - Flask App: Access the application through Caddy on http://localhost:5000.
+  This endpoint loads the atomspace. The request body must include:
 
-   ### Stopping the Services
+  | Field       | Description                                                        |
+  | ----------- | ------------------------------------------------------------------ |
+  | `folder_id` | The folder ID of the custom atomspace build                        |
+  | `type`      | The type of atomspace; can be one of: `mork`, `metta`, or `cypher` |
 
-      To stop the services, use:
+  Example request body:
 
-      ```bash
-      docker-compose down
+  ```json
+  {
+    "folder_id": "your_folder_id_here",
+    "type": "mork"
+  }
+  ```
 
-# Alternative, using bash script
- You can run the annotation service by executing ``run.sh`` file
+* **Query**
 
+  Endpoint: `/query`
+  Method: `POST`
 
-## Prerequisites
+  Use this endpoint to query the loaded atomspace.
 
-Make sure you have the following installed:
+---
 
-- Docker
-- Docker Compose
-- Bash shell (default on most Unix/Linux systems)
+# Running with Docker
 
-There should be this environment variable in your .env file
-   ```bash
-   APP_PORT=<the port on which the application will be exposed>
+**Build and Run Docker Container:**
 
-   DOCKER_HUB_REPO=<Docker Hub repository in the format {username}/{repository}>
+```sh
+docker build -t app .
+docker run -p 5000:5000 app
+```
 
-   MONGODB_DOCKER_PORT=<the port on which MongoDB will be accessible inside the Docker container, typically 27017>
+This will expose the application on port 5000.
 
-   CADDY_PORT=<the port on which Caddy will listen for incoming requests>
+---
 
-   CADDY_PORT_FORWARD=<the internal port inside the Docker container where Caddy forwards requests to>
-   ```
+# Running with Docker Compose
+
+Build and start services:
+
+```bash
+docker-compose up --build
+```
+
+Access the application through Caddy at:
+`http://localhost:5000`
+
+Stop services:
+
+```bash
+docker-compose down
+```
+
+---
+
+# Running with `run.sh` script
+
+Make sure these environment variables are set in your `.env` file:
+
+```bash
+APP_PORT=<the port on which the application will be exposed>
+DOCKER_HUB_REPO=<Docker Hub repository in the format username/repository>
+MONGODB_DOCKER_PORT=27017
+CADDY_PORT=<the port on which Caddy will listen for incoming requests>
+CADDY_PORT_FORWARD=<the internal port inside the Docker container where Caddy forwards requests>
+```
 
 ## Script Usage
 
-The `run.sh` script supports the following commands:
+* **Run Containers**
 
-### 1. Run Containers
+  ```bash
+  sudo ./run.sh run
+  ```
 
-To build the necessary images (if they are not already built) and start the containers, use the following command:
+* **Push Docker Images**
 
-```bash
-sudo ./run.sh run
-```
+  ```bash
+  sudo ./run.sh push
+  ```
 
-### 2. Push Docker Images
+* **Clean Up**
 
-To build the images and push them to Docker Hub, use:
+  ```bash
+  sudo ./run.sh clean
+  ```
 
-```bash
-sudo ./run.sh push
-```
+* **Stop Containers**
 
-### 3. Clean Up
+  ```bash
+  sudo ./run.sh stop
+  ```
 
-To stop and remove existing containers and the Docker network, use:
+* **Re-run Containers**
 
-```bash
-sudo ./run.sh clean
-```
+  ```bash
+  sudo ./run.sh re-run
+  ```
 
-### 4. Stop Containers
-
-To stop the running containers without removing them, use:
-
-```bash
-sudo ./run.sh stop
-```
-
-### 5. Re-run Containers
-
-To restart existing containers without pulling or building images, use:
-
-```bash
-sudo ./run.sh re-run
-```
-
-## Notes
-
-- The script requires `sudo` permissions to run Docker commands.
-- Ensure that you have the correct Docker images and that you have permissions to push to your Docker Hub account.
-
-## Example Workflow
-
-1. **Start the Services**:
-   ```bash
-   sudo ./run.sh run
-   ```
-
-2. **Make Changes to Your Code**.
-
-3. **Rebuild and Push Changes**:
-   ```bash
-   sudo ./run.sh push
-   ```
-
-4. **Clean Up After Development**:
-   ```bash
-   sudo ./run.sh clean
-   ```
+---

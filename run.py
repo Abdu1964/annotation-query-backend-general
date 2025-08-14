@@ -23,4 +23,5 @@ log_file = os.path.join(log_dir, 'error.log')
 logging.basicConfig(filename=log_file, level=logging.DEBUG)
 
 if __name__ == '__main__':
-    socketio.run(app, debug=False, host='0.0.0.0', port=APP_PORT)
+    socketio.run(app, debug=False, host='0.0.0.0', port=APP_PORT, allow_unsafe_werkzeug=True) #Abdu: I had to add `allow_unsafe_werkzeug=True` to make it work, maybe there is a better way?
+
