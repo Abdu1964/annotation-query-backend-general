@@ -172,12 +172,12 @@ class MorkQueryGenerator:
                     })
 
         if len(result) == 0:
-            return "()", [[]]
+            return "()", [[]], []
 
         query = self.get_node_properteis(result, schema)
 
         res = self.run_query(query)
-        return query, res
+        return query, res, result
 
     def get_node_properteis(self, results, schema):
         pattern = []
@@ -218,11 +218,11 @@ class MorkQueryGenerator:
 
     def parse_and_serialize(self, input, schema, graph_components, result_type):
         if result_type == 'graph':
-            query, result = self.prepare_query_input(input, schema)
+            query, result, prev_result = self.prepare_query_input(input, schema)
             tuples = metta_seralizer(result[0])
 
             if not tuples:
-                nodes, edges = self.parse_and_seralize_no_properties(result)
+                nodes, edges = self.parse_and_seralize_no_properties(prev_result)
                 return {"nodes": nodes, "edges": edges,
                         "node_count": 0,
                         "edge_count": 0,
@@ -265,20 +265,25 @@ class MorkQueryGenerator:
         for result in results:
             if len(result) == 0:
                 return [], []
-            nodes.add(result['source'])
-            nodes.add(result['target'])
+            source = result.get('source')
+            target = result.get('target')
+            if source:
+                nodes.add(source)
+            if target:
+                nodes.add(target)
 
-            source_label = result['source'].split(' ')[0]
-            target_label = result['target'].split(' ')[0]
-            edges.append({
-                "data": {
-                    "id": self.generate_id(),
-                    "edge_id": f'{source_label}_{result["predicate"]}_{target_label}',
-                    "label": result['predicate'],
-                    "source": result['source'],
-                    "target": result['target']
-                }
-            })
+            if source and target:
+                source_label = source.split(' ')[0]
+                target_label = target.split(' ')[0]
+                edges.append({
+                    "data": {
+                        "id": self.generate_id(),
+                        "edge_id": f'{source_label}_{result["predicate"]}_{target_label}',
+                        "label": result['predicate'],
+                        "source": source,
+                        "target": target
+                    }
+                })
 
         nodes_list = []
 
