@@ -237,6 +237,9 @@ def generate_result(query_code, annotation_id, requests, result_status, status=N
             / f"{annotation_id}.json"
         )
 
+        # Ensure parent directories exist
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
         with open(file_path, "w") as file:
             json.dump(grouped_graph, file)
 
