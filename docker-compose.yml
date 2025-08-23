@@ -9,6 +9,7 @@ services:
       - "${SCHEMA_DATA_VOLUME}"
     ports:
       - "${APP_PORT}:${APP_PORT}"
+    container_name: annotation_annotation_service_1
     # for now use development server till we can figure out
     # a way to make it work with gunicorn
     # command: gunicorn -w 16 --bind 0.0.0.0:${APP_PORT} run:app
